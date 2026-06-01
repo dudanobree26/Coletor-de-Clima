@@ -1,0 +1,68 @@
+# ============================================
+# COLETOR DE DADOS CLIMÁTICOS — API Open-Meteo
+# Autor: Eduarda nobre
+# Descrição: Coleta temperatura máxima e
+# precipitação dos últimos 7 dias via API
+# e salva os dados em arquivo CSV
+# ============================================
+
+import requests
+import pandas as pd
+
+
+#ETAPA 1 - CONFIGURAÇÃO DO ENDPOINT
+
+url= 'https://api.open-meteo.com/v1/forecast'
+
+print ('---------- COLETOR DE DADOS CLIMATICOS ----------')
+latitude = float(input(' informe a latitude desejada: '))
+longitude = float(input(' informe a longitude desejada: '))
+
+#DEFINIR PARAMETROS
+parametros = {
+    'latitude': latitude,
+    'longitude': longitude,
+    'daily': ['temperature_2m_max','precipitation_sum'],
+    'timezone': 'auto',
+    'past_days': 7
+}
+
+#ETAPA 2 - COLETA E VERIFICAÇÃO DE DADOS
+#atribuir get
+print ('coletando dados...')
+resposta = requests.get(url, params=parametros)
+
+#verificar se a atribuição foi bem sucedida
+if resposta.status_code == 200:
+  print('dados coletados com sucesso!')
+
+  #converter a resposta para json
+  dados_json = resposta.json()
+  #pega no dson apenas a parte diaria
+  dados_diarios = dados_json['daily']
+  #cria o dataframe com os dados coletados
+  df= pd.DataFrame(dados_diarios)
+
+  #ETAPA 3 - TRANFORMAÇÃO DOS DADOS
+  # "traduzuir"
+  df = df.rename(columns={
+      'time':'data',
+      'temperature_2m_max':'temperatura_max_C',
+      'precipitation_sum':'chuva_mm'
+  })
+
+  #converter a temperaura
+  df['temperatura_max_F'] =(df ['temperatura_max_C'] * 1.8) + 32
+
+  #exibir os dados coletados
+  print('---------- DADOS DOS ULTIMOS 7 DIAS ----------')
+  print(df.to_string(index=False))
+
+  #ETAPA 4 - SALVANDO ARQUIVO EM CSV
+  nome_do_arquivo = f'clima_{latitude}_{longitude}.csv'
+  df.to_csv(nome_do_arquivo, index=False)
+  print (f'arquivo salvo com sucesso: {nome_do_arquivo}')
+
+else:
+  print('erro ao conectar o API')
+  print(f'erro: {resposta.status_code}')
